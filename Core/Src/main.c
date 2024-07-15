@@ -1,20 +1,5 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -26,24 +11,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <math.h>
-
-#include "dsp/statistics_functions.h"
-#include "dsp/basic_math_functions.h"
-#include "dsp/filtering_functions.h"
-
-#include "signal_utils.h"
-#include "model_coefs.h"
+#include "wearbp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
-#if CFG_MODE == MODE_DEBUG
-#define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
-#define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
-#define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
-#endif
 
 /* USER CODE END PTD */
 
@@ -60,22 +32,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t adc_buf[CFG_CHUNKLEN] = {0};
-float tmp_buf[CFG_SIGLEN] = {0};
-float signorm[CFG_SIGLEN];
-size_t count = 0;
-uint8_t sig_ready = 0;
-float samp_raw, samp_rec;
-float curr_pred;
-float features[13];
-float tmp[1000];
-sig_fiducials fid;
-
-arm_fir_instance_f32 fir;
-	float fir_state[CFG_CHUNKLEN + FILT_FIR_NTAPS - 1];
-
-
-
+WBP_System WBP;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -123,16 +80,14 @@ int main(void)
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  memset(fir_state, 0, sizeof(float)*(CFG_CHUNKLEN+FILT_FIR_NTAPS-1));
-  	arm_fir_init_f32(&fir, FILT_FIR_NTAPS, FILT_FIR_COEFS, fir_state, CFG_CHUNKLEN);
-  HAL_TIM_Base_Start_IT(&htim2);
-  HAL_ADC_Start_DMA(&hadc1, adc_buf, CFG_CHUNKLEN);
+  WBP_Init(&WBP);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	WBP_ProcessPPG(&WBP);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -188,57 +143,19 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
-	float* cell = tmp_buf + count*CFG_CHUNKLEN;
-
-	for (size_t i = 0; i < CFG_CHUNKLEN; i++) {
-		cell[i] = adc_buf[i] * 1.0f;
-		cell[i] = cell[i] / 4095.0f * 3.3f;
-	}
-
-	arm_fir_f32(&fir, cell, cell, CFG_CHUNKLEN);
-	//HAL_UART_Transmit_DMA(&huart2, cell, 4*CFG_CHUNKLEN);
-
-	if (count == CFG_WINSIZE - 1) {
-		count = 0;
-
-		sig_norm(tmp_buf+5*125, CFG_SIGLEN-5*125, signorm, SIG_NORM_RANGE);
-		sig_get_fiducials(signorm, CFG_SIGLEN-5*125, &fid);
-
-		sig_featex(tmp_buf+5*125, CFG_SIGLEN-5*125, fid, tmp, features);
-
-		arm_sub_f32(features, SVM_SMIN, features, 13);
-		for (size_t i = 0; i < 13; i++) {
-			features[i] /= SVM_SDIF[i];
-		}
-
-		arm_dot_prod_f32(features, SVM_BETA, 13, &curr_pred);
-		curr_pred += SVM_BIAS;
-
-		HAL_UART_Transmit_DMA(&huart2, &curr_pred, 4);
-
-	} else {
-		count += 1;
-	}
+	WBP_AcquireADC(&WBP);
 }
 
 /*
- sig_norm(recx, SIGNAL_LENGTH, normed, SIG_NORM_RANGE);
-sig_fiducials fid;
-sig_get_fiducials(normed, SIGNAL_LENGTH, &fid);
-
-float tmp[SIGNAL_LENGTH];
-float feat_mat[19];
-float pred;
-uint8_t isgood = sig_check(normed, SIGNAL_LENGTH, fid, tmp);
-if (isgood) {
-	sig_featex(recx, SIGNAL_LENGTH, fid, tmp, feat_mat);
-
-	// predict SVM y = <x,beta>+bias
-	arm_dot_prod_f32(feat_mat, SVM_BETA, 19, &pred);
-	pred += SVM_BIAS;
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (
+			htim->Instance == CFG_TOGGLE_TIM &&
+			htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1
+		) {
+		WBP_ToggleMeasure(&WBP);
+	}
 }
- */
-
+*/
 /* USER CODE END 4 */
 
 /**
