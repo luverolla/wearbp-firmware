@@ -53,7 +53,7 @@ void WBP_AcquireADC(WBP_System* Handle) {
 }
 
 void WBP_HandleButton(WBP_System* Handle) {
-	if (!WBP.IsMeasuring) {
+	if (!Handle->IsMeasuring) {
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
 	}
 }
