@@ -14,21 +14,16 @@
  * @brief Sampling frequency [Hz] for PPG signal
  *
  * This frequency has been used for the design of the digital filter, as well
- * as the training and validation of the statistical inference model. Moreover,
- * also the clock speed and the parameters of TIM2 have been tuned to match it.
+ * as the training and test of the statistical inference model. Moreover, also
+ * the clock speed and the parameters of TIM_ADC have been tuned to match it.
+ * Therefore, changing this value implies the repetition of the above steps.
  *
- * For this reason, I suggest you to NOT change this value, and, in case you
- * decide to use other datasets, with signals sampled at different rates, you
- * should consider re-sampling first.
- *
- * But if it's not possible or, for any reason, you need a different frequency,
- * keep in mind that you'll need to re-design the filter and repeat the train
- * and validation of the statistical model with the new value.
+ * The suggestion, if possible, is to avoid changing this value to adapt the
+ * system to other signals sampled at different rates. Instead consider first
+ * re-sampling, as it has been done for the signals from the VitalDB dataset.
  *
  */
 #define PPG_FSAMPLE 125
-
-#define PPG_FSAMPLE_MS
 
 /**
  * @brief Length [samples] of PPG signal windows
@@ -149,29 +144,26 @@ void ppg_get_fiducials(const float* ppg, size_t n, ppg_fid* fid);
  *
  * @param ppg the given PPG signal
  * @param fid the supplied fiducial structure
- * @return the number of retained cardiac cycles
+ * @return PPG_FIDFA if no cardiac cycle has been kept, PPG_NOERR otherwise.
  */
-size_t ppg_filt_fiducials(const float* ppg, ppg_fid* fid);
+ppg_error ppg_filt_fiducials(const float* ppg, ppg_fid* fid);
 
 /**
- * @brief Extract features from a PPG signal and a set of fiducials
+ * @brief Extracts features from a PPG signal and a set of fiducials
  *
- * Both input and output pointer MUST refer to memory blocks able to store a
- * number of bytes according to the type. If the memory areas are shorter,
- * the behaviour of this function cannot be determined.
+ * This function does not perform any check on the supplied set of fiducials.
+ * Make sure to call the ppg_filt_fiducial() function before.
  *
- * This function calls ppg_filt_fiducials() before all necessary computations.
- * If no cardiac cycle has been retained after filtering, this function returns
- * the error code PPG_FIDFA. Otherwise it completes the feature extraction and
- * returns PPG_NOERR.
- *
+ * The support buffer tmp and the feature vector feats must be able to store
+ * respectively PPG_MAX_FID and MDL_NFEATS elements.
  *
  * @param ppg the given PPG signal
  * @param n the size of the given signal
  * @param fid the supplied set of fiducials
+ * @param tmp support buffer for accumulating values of each feature
  * @param feats the vector to write features in
  */
-ppg_error ppg_get_features(
+void ppg_get_features(
 	const float* ppg, size_t n, ppg_fid* fid, float* tmp, float* feats
 );
 

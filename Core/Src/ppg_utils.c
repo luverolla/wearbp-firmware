@@ -219,7 +219,7 @@ void ppg_get_fiducials(const float* ppg, size_t n, ppg_fid* fid) {
     }
 }
 
-size_t ppg_filt_fiducials(const float* ppg, ppg_fid* fid) {
+ppg_error ppg_filt_fiducials(const float* ppg, ppg_fid* fid) {
 	// index of first valley of cardiac cycle
 	size_t v_idx = 0;
 
@@ -264,16 +264,13 @@ size_t ppg_filt_fiducials(const float* ppg, ppg_fid* fid) {
 		v_idx++;
 	}
 
-	// i need cardiac cycles
-	return curr_n_vls / 2;
+	// I need cardiac cycles
+	return ((curr_n_vls / 2) > 0) ? PPG_NOERR : PPG_FIDFA;
 }
 
-ppg_error ppg_get_features(
+void ppg_get_features(
 	const float* ppg, size_t n, ppg_fid* fid, float* tmp, float* feats
 ) {
-	ppg_error res;
-
-	res = PPG_NOERR;
 	size_t filled;
 	float val;
 	size_t curr_feat = 0;
@@ -580,6 +577,4 @@ ppg_error ppg_get_features(
 	feats[curr_feat] = feats[4] / feats[13];
 	curr_feat++;
 	feats[curr_feat] = feats[1] / feats[13];
-
-	return res;
 }

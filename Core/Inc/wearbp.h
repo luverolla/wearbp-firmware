@@ -1,6 +1,6 @@
 /**
  * @file wearbp.h
- * @brief This file contains necessary defines for the wearbp system
+ * @brief This file contains necessary defines for the WearBP system
  *
  */
 
@@ -21,7 +21,7 @@
  * the functions in this file.
  */
 typedef struct WBP_System {
-	uint8_t IsMeasuring;
+	uint8_t IsMeasuring;		///< tells when to activate ADC and its timer
 	size_t SampleCount; 		///< number of samples acquired from ADC
 	uint8_t IsPPGReady; 		///< set once the signal gets all its samples
 
@@ -29,7 +29,8 @@ typedef struct WBP_System {
 
 	ppg_filter Filter;			///< FIR filter instance
 	float FilterState[
-	  PPG_SIGLEN + FILT_FIR_NTAPS - 1
+	  PPG_SIGLEN +
+	  FILT_FIR_NTAPS - 1
     ];							///< buffer storing the FIR filter's state
 
 	float PPGMean;				///< DC component of the raw PPG waveform
@@ -77,13 +78,33 @@ void WBP_Init(WBP_System* Handle);
  *
  * This function must be called only when a sample from the ADC is available.
  * It is suggested to set the ADC for operating in DMA mode and to call this
- * function from the HAL_ADC_ConvCpltCallback() ISR.
+ * function from the HAL_ADC_ConvCpltCallback() callback.
  *
  * @param Handle pointer to the global state object
  */
 void WBP_AcquireADC(WBP_System* Handle);
 
-void WBP_ToggleMeasure(WBP_System* Handle);
+/**
+ * @brief Handles button click for manual start of measure
+ *
+ * If the system is in IDLE status, this function brings it in MEASURE status
+ * by resetting the timer.
+ *
+ * This function must be called within a EXTI callback
+ *
+ * @param Handle pointer to the global system object
+ */
+void WBP_HandleButton(WBP_System* Handle);
+
+/**
+ * @brief Toggle measurement status based on main timer
+ *
+ * This functions starts or stops the ADC and its timer whenever an interrupt
+ * from the main timer is received, and it must be called inside its callback.
+ *
+ * @param Handle pointer to the global state object
+ */
+void WBP_ToggleMeasuremnt(WBP_System* Handle);
 
 /**
  * @brief Process the acquired PPG waveform

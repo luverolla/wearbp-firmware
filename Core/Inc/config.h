@@ -22,7 +22,7 @@
  * Tune this parameter and CFG_AVGWIN accordingly to the error variability
  * provided by your statistical or ML model
  */
-#define CFG_WINSIZE 20
+#define CFG_WINSIZE 5
 
 /**
  * @brief Number of BP values to compute the mean value
@@ -32,7 +32,7 @@
  *
  * Tune this parameter with care, together with CFG_WINSIZE.
  */
-#define CFG_AVGCOUNT 5
+#define CFG_AVGCOUNT 100
 
 /**
  * @brief Handles to Timer and ADC peripherals of STM32 platform
@@ -44,11 +44,11 @@
  *
  */
 ///@{
-#define CFG_ADC_TIM			&htim2
-#define CFG_TOGGLE_TIM		&htim3
-#define CFG_SENSOR_ADC		&hadc1
+#define CFG_DEV_TIM_ADC		(&htim2)
+#define CFG_DEV_TIM_MAIN	(&htim3)
+#define CFG_DEV_ADC			(&hadc1)
 #if CFG_DEBUG == 1
-#define CFG_DEBUG_UART		&huart2
+#define CFG_DEV_UART		(&huart2)
 #endif
 ///@}
 
